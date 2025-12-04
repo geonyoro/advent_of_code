@@ -9,24 +9,32 @@ pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const contents = try file.reader().readAllAlloc(allocator, pos);
     defer allocator.free(contents);
+    try runFromContents(contents);
+}
+
+fn runFromContents(contents: []u8) !void {
     var dial: i16 = 50;
     var it = std.mem.splitAny(u8, contents, "\n");
     var touchesZero: u16 = 0;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const gallocator = gpa.allocator();
-    while (it.next()) |line| {
-        if (line.len == 0) {
-            continue;
+    // ensure this is deallocated and does not leak memory
+    defer std.debug.assert(gpa.deinit() == .ok);
+    {
+        const allocator = gpa.allocator();
+        while (it.next()) |line| {
+            if (line.len == 0) {
+                continue;
+            }
+            const moves = try std.fmt.parseInt(i16, line[1..], 10);
+            var direction: i8 = 1;
+            if (line[0] == 'L') {
+                direction *= -1;
+            }
+            const val = try moveDial(allocator, dial, moves, direction);
+            defer allocator.free(val.debugString);
+            dial = val.dial;
+            touchesZero += val.touchesZero;
         }
-        const moves = try std.fmt.parseInt(i16, line[1..], 10);
-        var direction: i8 = 1;
-        if (line[0] == 'L') {
-            direction *= -1;
-        }
-        const val = try moveDial(gallocator, dial, moves, direction);
-        defer gallocator.free(val.debugString);
-        dial = val.dial;
-        touchesZero += val.touchesZero;
     }
     print("Zero: {d}\n", .{touchesZero});
 }
