@@ -6,12 +6,14 @@ pub fn main() !void {
     const file = try std.fs.cwd().openFile("input", .{});
     defer file.close();
     const pos = try file.getEndPos();
-    const allocator = std.heap.page_allocator;
+    var allocator = std.heap.page_allocator;
     const contents = try file.reader().readAllAlloc(allocator, pos);
     defer allocator.free(contents);
     var dial: i16 = 50;
     var it = std.mem.splitAny(u8, contents, "\n");
     var touchesZero: u16 = 0;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    allocator = gpa.allocator();
     while (it.next()) |line| {
         if (line.len == 0) {
             continue;
@@ -21,7 +23,8 @@ pub fn main() !void {
         if (line[0] == 'L') {
             direction *= -1;
         }
-        const val = try moveDial(dial, moves, direction);
+        const val = try moveDial(allocator, dial, moves, direction);
+        defer allocator.free(val.debugString);
         dial = val.dial;
         touchesZero += val.touchesZero;
     }
@@ -29,7 +32,7 @@ pub fn main() !void {
 }
 
 const DialMove = struct { dial: i16, touchesZero: u16, debugString: []u8 };
-fn moveDial(dial_: i16, moves_: i16, direction: i8) !DialMove {
+fn moveDial(allocator: std.mem.Allocator, dial_: i16, moves_: i16, direction: i8) !DialMove {
     var dial = dial_;
     var moves = moves_;
     var touchesZero: u16 = 0;
@@ -51,10 +54,7 @@ fn moveDial(dial_: i16, moves_: i16, direction: i8) !DialMove {
         touchesZero += 1;
     }
     // for later printing if needed
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
     const string = try std.fmt.allocPrint(allocator, "dial:{d} rot:{d} change:{d}", .{ dial, rotations, moves });
-    defer allocator.free(string);
     return .{ .dial = dial, .touchesZero = touchesZero, .debugString = string };
 }
 
@@ -74,6 +74,8 @@ test "moveDial" {
         testCase{ .startDial = 0, .moves = 14, .dial = 14, .touchesZero = 0 },
         testCase{ .startDial = 14, .moves = -82, .dial = 32, .touchesZero = 1 },
     };
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
     for (cases) |c| {
         var temp_moves: i16 = c.moves;
         if (c.moves < 0) {
@@ -83,10 +85,13 @@ test "moveDial" {
         if (c.moves < 0) {
             dir = -1;
         }
+        const val = try moveDial(allocator, c.startDial, temp_moves, dir);
+        defer allocator.free(val.debugString);
         errdefer {
-            print("{any}", .{c});
+            print("{any}\n", .{c});
+            print("{s}\n", .{val.debugString});
         }
-        const final = moveDial(c.startDial, temp_moves, dir);
-        try expect(c.touchesZero == final.touchesZero);
+        try expect(c.touchesZero == val.touchesZero);
+        try expect(c.dial == val.dial);
     }
 }
