@@ -19,8 +19,7 @@ func main() {
 		parts := strings.Split(part, "-")
 		from := parts[0]
 		to := parts[1]
-		repeating := invalids.GetFromRange(from, to)
-		fmt.Println(part, repeating)
+		repeating := invalids.GetRepeatingFromRange(from, to)
 		for _, r := range repeating {
 			total += r
 		}

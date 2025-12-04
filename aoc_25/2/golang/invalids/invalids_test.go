@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetFromRange(t *testing.T) {
+func TestGetRepeatingFromRange(t *testing.T) {
 	type testCase struct {
 		From     string
 		To       string
@@ -20,15 +20,15 @@ func TestGetFromRange(t *testing.T) {
 		{"998", "1012", []int{1010}},
 		{"1188511880", "1188511890", []int{1188511885}},
 		{"222220", "222224", []int{222222}},
-		{"1698522", "1698528", []int{}},
+		{"1698522", "1698528", nil},
 		{"446443", "446449", []int{446446}},
 		{"38593856", "38593862", []int{38593859}},
-		{"565653", "565659", []int{}},
-		{"824824821", "824824827", []int{}},
-		{"2121212118", "2121212124", []int{}},
+		{"565653", "565659", nil},
+		{"824824821", "824824827", nil},
+		{"2121212118", "2121212124", nil},
 	}
 	for _, c := range testCases {
-		out := invalids.GetFromRange(c.From, c.To)
+		out := invalids.GetRepeatingFromRange(c.From, c.To)
 		assert.Equal(t, out, c.Invalids)
 		for _, r := range out {
 			total += r
