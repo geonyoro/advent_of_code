@@ -6,14 +6,14 @@ pub fn main() !void {
     const file = try std.fs.cwd().openFile("input", .{});
     defer file.close();
     const pos = try file.getEndPos();
-    var allocator = std.heap.page_allocator;
+    const allocator = std.heap.page_allocator;
     const contents = try file.reader().readAllAlloc(allocator, pos);
     defer allocator.free(contents);
     var dial: i16 = 50;
     var it = std.mem.splitAny(u8, contents, "\n");
     var touchesZero: u16 = 0;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    allocator = gpa.allocator();
+    const gallocator = gpa.allocator();
     while (it.next()) |line| {
         if (line.len == 0) {
             continue;
@@ -23,8 +23,8 @@ pub fn main() !void {
         if (line[0] == 'L') {
             direction *= -1;
         }
-        const val = try moveDial(allocator, dial, moves, direction);
-        defer allocator.free(val.debugString);
+        const val = try moveDial(gallocator, dial, moves, direction);
+        defer gallocator.free(val.debugString);
         dial = val.dial;
         touchesZero += val.touchesZero;
     }
